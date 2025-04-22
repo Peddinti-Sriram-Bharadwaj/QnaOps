@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Envs
+.env
+.venv
+env/
+venv/
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+
+# Docker
+*.tar
+*.bak
+docker-compose.override.yml
+
+# Notebooks (if any)
+.ipynb_checkpoints/
+
+# Jenkins
+/secrets/  # if you store Vault tokens or Jenkins keys locally
+
+# Data
+uploads/
+parsed_docs/
+*.pdf
+*.jsonl
