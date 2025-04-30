@@ -1,0 +1,27 @@
+# k8s-fastapi-hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fastapi-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fastapi-app
+  minReplicas: 2 # Your current minimum
+  maxReplicas: 10 # Set a reasonable maximum
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        # Target average CPU utilization across all pods
+        averageUtilization: 75
+  # Optional: Add memory-based scaling too
+  # - type: Resource
+  #   resource:
+  #     name: memory
+  #     target:
+  #       type: Utilization
+  #       averageUtilization: 75

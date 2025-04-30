@@ -1,0 +1,40 @@
+# k8s-redis.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service # DNS name used by other services (matches REDIS_HOST)
+spec:
+  ports:
+    - port: 6379 # Port the service exposes (matches REDIS_PORT)
+      targetPort: 6379 # Port the container listens on
+  selector:
+    app: redis
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine # Or your preferred version
+          ports:
+            - containerPort: 6379
+          # Add command/args for persistence or password if needed
+          # e.g., command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          # env:
+          #   - name: REDIS_PASSWORD
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: app-secrets # If you add a REDIS_PASSWORD to your secret
+          #         key: REDIS_PASSWORD

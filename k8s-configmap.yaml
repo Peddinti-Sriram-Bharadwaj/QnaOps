@@ -1,0 +1,24 @@
+# k8s-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  # Server Config
+  API_HOST: "0.0.0.0" # Good default for containers
+  API_PORT: "8000"    # Port the container listens on
+  DEBUG: "false"      # Set to false for production, true for dev/debug clusters
+  # Redis
+  REDIS_PORT: "6379"
+  # Vector DB (Qdrant example)
+  QDRANT_PORT: "6333"
+  # Model Version
+  DEFAULT_MODEL_VERSION: "v1"
+  # Auth (Optional)
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  # PostgreSQL (Host/Port often derived, but can be explicit)
+  POSTGRES_HOST: "postgres-service" # Explicitly using K8s service name
+  POSTGRES_PORT: "5432"
+  # Docker image tags (less relevant inside K8s, but can be kept for reference)
+  MODEL_IMAGE_TAG: "latest" # Consider using specific tags
+  API_IMAGE_TAG: "latest"   # Consider using specific tags

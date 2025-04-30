@@ -1,0 +1,65 @@
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QnA Bot</title>
+    <style>
+        body { font-family: sans-serif; display: flex; margin: 20px; }
+        #main-content { flex-grow: 1; margin-right: 20px; max-width: 700px; }
+        #sidebar { width: 250px; border-left: 1px solid #ccc; padding-left: 20px; flex-shrink: 0; }
+        #question-form textarea { width: 95%; margin-bottom: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;}
+        #question-form button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #question-form button:hover { background-color: #0056b3; }
+        #answer-area { margin-top: 20px; border: 1px solid #eee; padding: 15px; min-height: 100px; background-color: #f9f9f9; border-radius: 4px; }
+        .feedback-buttons button, .share-button { margin-top: 10px; margin-right: 5px; cursor: pointer; padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white; }
+        .feedback-buttons button:hover, .share-button:hover { background-color: #f0f0f0; }
+        .feedback-buttons button:disabled { cursor: not-allowed; opacity: 0.6; }
+        .share-section input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .popular-list ul { padding-left: 0; list-style: none; }
+        .popular-list li { margin-bottom: 8px; }
+        .popular-list a { text-decoration: none; color: #007bff; }
+        .popular-list a:hover { text-decoration: underline; }
+        .loader { display: none; margin-top: 10px; }
+        .error { color: red; margin-top: 10px; font-weight: bold; }
+        #feedback-msg { font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <h1>Ask the QnA Bot</h1>
+        <form id="question-form">
+            <textarea id="question-input" rows="4" placeholder="Enter your question here..." required></textarea><br>
+            <button type="submit">Ask</button>
+        </form>
+
+        <div class="loader" id="loader">Loading...</div>
+        <div class="error" id="error-message"></div>
+
+        <div id="answer-area" style="display: none;">
+            <h2>Answer:</h2>
+            <p id="answer-text" style="white-space: pre-wrap;"></p> <!-- Allow line breaks -->
+            <div class="feedback-buttons">
+                <button id="helpful-btn">👍 Helpful</button>
+                <button id="unhelpful-btn">👎 Not Helpful</button>
+                <span id="feedback-msg" style="margin-left: 10px; color: green;"></span>
+            </div>
+             <div class="share-section" style="margin-top: 15px;">
+                 <button class="share-button" id="share-btn">🔗 Share</button>
+                 <input type="text" id="share-link" readonly style="display: none; width: 70%; margin-left: 5px;">
+             </div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <h2>Popular Questions</h2>
+        <div class="popular-list" id="popular-questions-list">
+            Loading...
+        </div>
+    </div>
+
+    <!-- Make sure script path is correct if served via StaticFiles -->
+    <script src="/static/script.js"></script>
+</body>
+</html>
