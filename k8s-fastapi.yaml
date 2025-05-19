@@ -17,7 +17,7 @@ kind: Deployment
 metadata:
   name: fastapi-app
 spec:
-  replicas: 2 # Start with 2, scale as needed
+  replicas: 1 # Start with 2, scale as needed
   selector:
     matchLabels:
       app: fastapi-app
@@ -35,7 +35,7 @@ spec:
         image: python:3.9-slim # A small python image suitable for running the download script
         env:
         - name: HF_MODEL_NAME
-          value: "distilbert-base-uncased-distilled-squad" # <--- CHANGE THIS to your desired Hugging Face model ID
+          value: "ashutoshj01/bert-finetuned-squad" # <--- Ensure this is the model you want to use
         - name: MODEL_STORAGE_PATH
           value: "/mnt/model" # This path must match the mountPath below and model_path in qna_engine.py
         # If your model is private or requires authentication, uncomment and configure HF_TOKEN:
@@ -87,6 +87,9 @@ spec:
                 name: app-config # Load non-sensitive config
             - secretRef:
                 name: app-secrets # Load secrets and connection details
+          volumeMounts: # Mount the PVC into the main container
+            - name: model-storage
+              mountPath: /mnt/model # This is where the model will be available, matching MODEL_DIR in qa_service.py
           # The command uses the API_HOST and API_PORT from the mounted config
           # Ensure your app reads these from the environment
           command: ["uvicorn"]
@@ -94,11 +97,11 @@ spec:
           # --- Resource Requests and Limits ---
           resources:
             requests:
-              memory: "128Mi" # Request 128 Megabytes of RAM
-              cpu: "100m"    # Request 0.1 CPU core (100 millicores) - IMPORTANT FOR HPA
+              memory: "1Gi" # Request 1 Gigabyte of RAM (Adjust as needed)
+              cpu: "0.5"    # Request 0.1 CPU core (100 millicores) - IMPORTANT FOR HPA
             limits:
-              memory: "512Mi" # Limit RAM usage to 512 Megabytes
-              cpu: "500m"    # Limit CPU usage to 0.5 CPU core
+              memory: "2Gi" # Limit RAM usage to 512 Megabytes
+              cpu: "1"    # Limit CPU usage to 0.5 CPU core
           # ------------------------------------
           # Add readiness/liveness probes for better health checking
           readinessProbe:
