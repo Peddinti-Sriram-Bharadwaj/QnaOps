@@ -8,9 +8,8 @@ logger = logging.getLogger(__name__)
 if not logger.hasHandlers(): # Avoid adding multiple handlers if already configured
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# Define the path where the model weights will be mounted
-# This path corresponds to the volume mount in your Kubernetes deployment
-model_path = "/mnt/model"
+# Define the Hugging Face model identifier
+model_identifier = "ashutoshj01/bert-finetuned-squad"
 
 # Global variable for the pipeline, initialized to None
 question_answerer = None
@@ -19,13 +18,13 @@ def load_model_and_pipeline():
     """Loads the model, tokenizer, and creates the Q&A pipeline."""
     global question_answerer
     try:
-        logger.info(f"Attempting to load model and tokenizer from: {model_path}")
-        model = AutoModelForQuestionAnswering.from_pretrained(model_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        logger.info(f"Attempting to load model and tokenizer from Hugging Face Hub: {model_identifier}")
+        model = AutoModelForQuestionAnswering.from_pretrained(model_identifier)
+        tokenizer = AutoTokenizer.from_pretrained(model_identifier)
         question_answerer = pipeline("question-answering", model=model, tokenizer=tokenizer)
-        logger.info(f"Successfully loaded model and tokenizer from {model_path}. Q&A pipeline is ready.")
+        logger.info(f"Successfully loaded model and tokenizer for '{model_identifier}'. Q&A pipeline is ready.")
     except Exception as e:
-        logger.error(f"CRITICAL: Error loading model/tokenizer from {model_path}: {e}", exc_info=True)
+        logger.error(f"CRITICAL: Error loading model/tokenizer for '{model_identifier}': {e}", exc_info=True)
         question_answerer = None # Ensure pipeline is None if loading fails
 
 # Attempt to load the model and pipeline when this module is first imported.
