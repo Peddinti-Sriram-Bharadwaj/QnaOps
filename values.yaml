@@ -1,0 +1,30 @@
+# values.yaml
+
+image: "docker.elastic.co/elasticsearch/elasticsearch:8.7.0"
+
+replicaCount: 1
+
+resources:
+  limits:
+    memory: "8Gi"
+    cpu: "2000m"
+  requests:
+    memory: "4Gi"
+    cpu: "1000m"
+
+esConfig:
+  elasticsearch.yml: |
+    cluster.name: "elastic-search-cluster"
+    node.name: "${HOSTNAME}"
+    discovery.type: single-node
+    xpack.security.enabled: false
+    xpack.security.http.ssl.enabled: false # Explicitly disable SSL for HTTP
+    bootstrap.memory_lock: true
+    indices.query.bool.max_clause_count: 1024
+    http.max_content_length: "500mb"
+    indices.fielddata.cache.size: "30%"
+
+service:
+  type: LoadBalancer
+  port: 9200
+  nodePort: 30200
