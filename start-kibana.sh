@@ -1,0 +1,1 @@
+minikube service kibana-kibana -n elastic-system --url

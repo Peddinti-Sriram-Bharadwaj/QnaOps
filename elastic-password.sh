@@ -1,0 +1,1 @@
+kubectl get secrets --namespace=elastic-system elasticsearch-master-credentials -ojsonpath='{.data.password}' | base64 -d

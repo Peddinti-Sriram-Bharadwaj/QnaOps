@@ -1,0 +1,1 @@
+kubectl get secrets --namespace=elastic-system kibana-kibana-es-token -ojsonpath='{.data.token}' | base64 -d
