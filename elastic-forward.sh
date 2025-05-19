@@ -1,0 +1,1 @@
+kubectl port-forward svc/elasticsearch-master -n elastic-system 9200

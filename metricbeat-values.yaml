@@ -1,0 +1,19 @@
+metricbeat.modules:
+- module: kubernetes
+  metricsets:
+    - node
+    - system
+    - pod
+    - container
+    - volume
+  period: 10s
+  host: ${NODE_NAME}
+  hosts: ["https://${HOSTNAME}:10250"]
+  bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+  ssl.verification_mode: "none"
+
+output.elasticsearch:
+  hosts: ["https://elasticsearch-master.elastic-system.svc.cluster.local:9200"]
+  username: elastic
+  password: dXB1ImSCRKeIFDeb
+  ssl.verification_mode: none

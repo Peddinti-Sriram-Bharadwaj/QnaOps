@@ -1,0 +1,199 @@
+---
+- name: Set up Elastic Stack on Minikube with Ansible
+  hosts: localhost
+  connection: local
+  vars:
+    elastic_password: ""
+    namespace: elastic-system
+    # Add timeout variables for better control
+    pod_ready_timeout: 300s
+    install_timeout: 600s
+
+  tasks:
+    # Check if minikube is running before starting it
+    - name: Check if minikube is running
+      shell: minikube status | grep -q "Running"
+      register: minikube_status
+      ignore_errors: true
+      changed_when: false
+
+    - name: Run Minikube start script
+      script: ./minikube-start.sh
+      when: minikube_status.rc != 0
+      register: minikube_start
+      
+    # Wait for minikube to be fully ready
+    - name: Wait for minikube to be fully ready
+      shell: kubectl get nodes --no-headers | grep -q " Ready "
+      register: node_ready
+      until: node_ready.rc == 0
+      retries: 30
+      delay: 10
+      when: minikube_start.changed | default(false)
+      changed_when: false
+
+    # Check if namespace exists
+    - name: Check if namespace exists
+      shell: kubectl get namespace {{ namespace }} --no-headers --ignore-not-found
+      register: namespace_exists
+      changed_when: false
+
+    - name: Create namespace if it doesn't exist
+      shell: kubectl create namespace {{ namespace }}
+      when: namespace_exists.stdout == ""
+      
+    # Add Elastic Helm repo if not already added
+    - name: Check if Elastic Helm repo is added
+      shell: helm repo list | grep -q "elastic"
+      register: elastic_repo_exists
+      ignore_errors: true
+      changed_when: false
+
+    - name: Add Elastic Helm repo
+      shell: helm repo add elastic https://helm.elastic.co && helm repo update
+      when: elastic_repo_exists.rc != 0
+
+    - name: Check if Elasticsearch is installed
+      shell: helm list -n {{ namespace }} -q | grep -w elasticsearch
+      register: elasticsearch_exists
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install Elasticsearch using Helm
+      shell: |
+        helm install elasticsearch elastic/elasticsearch -n {{ namespace }} \
+        --set persistence.enabled=true \
+        --set volumeClaimTemplate.resources.requests.storage="2Gi" \
+        --set replicas=1 \
+        --set minimumMasterNodes=1 \
+        --set resources.requests.memory="1Gi" \
+        --set resources.limits.memory="2Gi" \
+        --set esJavaOpts="-Xmx1g -Xms1g" \
+        --timeout {{ install_timeout }}
+      when: elasticsearch_exists.rc != 0
+      register: elasticsearch_installed
+
+    # Only wait for pod if we just installed Elasticsearch
+    - name: Wait for Elasticsearch pod to be ready
+      shell: kubectl wait --namespace={{ namespace }} --for=condition=ready pod -l app=elasticsearch-master --timeout={{ pod_ready_timeout }}
+      when: elasticsearch_exists.rc != 0 or elasticsearch_installed is defined
+
+    # Try to get the password regardless of whether we just installed or not
+    - name: Check if Elasticsearch credentials secret exists
+      shell: kubectl get secrets --namespace={{ namespace }} elasticsearch-master-credentials -o name
+      register: elastic_secret_exists
+      ignore_errors: true
+      changed_when: false
+
+    - name: Get Elasticsearch password
+      shell: |
+        kubectl get secrets --namespace={{ namespace }} elasticsearch-master-credentials \
+        -ojsonpath='{.data.password}' | base64 -d
+      register: elastic_password_raw
+      when: elastic_secret_exists.rc == 0
+      no_log: true  # Hide sensitive output
+
+    - name: Set elastic password variable
+      set_fact:
+        elastic_password: "{{ elastic_password_raw.stdout }}"
+      when: elastic_secret_exists.rc == 0 and elastic_password_raw.stdout is defined
+      no_log: true  # Hide sensitive output
+
+    - name: Test Elasticsearch health
+      shell: helm --namespace={{ namespace }} test elasticsearch
+      register: elastic_test_result
+      failed_when: "'FAIL' in elastic_test_result.stdout"
+      changed_when: false
+      when: elastic_password != ""
+
+    - name: Check if Kibana is installed
+      shell: helm list -n {{ namespace }} -q | grep -w kibana
+      register: kibana_exists
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install Kibana
+      shell: |
+        helm install kibana elastic/kibana -n {{ namespace }} \
+        --set service.type=LoadBalancer \
+        --set elasticsearch.hosts=https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200 \
+        --set elasticsearch.username=elastic \
+        --set elasticsearch.password="{{ elastic_password }}" \
+        --set ingress.enabled=false \
+        --timeout {{ install_timeout }}
+      when: kibana_exists.rc != 0 and elastic_password != ""
+      register: kibana_installed
+
+    # Wait for Kibana pod only if we just installed it
+    - name: Wait for Kibana pod to be ready
+      shell: kubectl wait --namespace={{ namespace }} --for=condition=ready pod -l app=kibana --timeout={{ pod_ready_timeout }}
+      when: kibana_exists.rc != 0 and kibana_installed is defined
+      
+    - name: Check if Metricbeat is installed
+      shell: helm list -n {{ namespace }} -q | grep -w metricbeat
+      register: metricbeat_exists
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install Metricbeat
+      shell: |
+        helm install metricbeat elastic/metricbeat -n {{ namespace }} \
+        --set elasticsearch.hosts={https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200} \
+        --set elasticsearch.username=elastic \
+        --set elasticsearch.password={{ elastic_password }} \
+        --set daemonset.enabled=true \
+        --timeout {{ install_timeout }}
+      when: metricbeat_exists.rc != 0 and elastic_password != ""
+      register: metricbeat_installed
+
+    # Check if metricbeat-values.yaml exists before applying it
+    - name: Check if metricbeat-values.yaml exists
+      stat:
+        path: metricbeat-values.yaml
+      register: metricbeat_values_file
+
+    - name: Apply custom Metricbeat values
+      shell: |
+        helm upgrade --install metricbeat elastic/metricbeat -n {{ namespace }} -f metricbeat-values.yaml
+      when: metricbeat_values_file.stat.exists
+
+    # Wait for Metricbeat pods only if we just installed or upgraded it
+    - name: Wait for Metricbeat pods to be ready
+      shell: |
+        kubectl wait --for=condition=ready pod -l release=metricbeat -n {{ namespace }} --timeout={{ pod_ready_timeout }}
+      when: metricbeat_installed is defined or (metricbeat_values_file.stat.exists and metricbeat_exists.rc == 0)
+
+    # Check if port-forwards are already running
+    - name: Check if Elasticsearch port-forward is already running
+      shell: ps aux | grep "kubectl port-forward.*elasticsearch" | grep -v grep
+      register: elasticsearch_forward_running
+      ignore_errors: true
+      changed_when: false
+
+    - name: Port forward Elasticsearch
+      shell: ./elastic-forward.sh &
+      when: elasticsearch_forward_running.rc != 0
+      args:
+        executable: /bin/bash
+
+    - name: Check if Kibana port-forward is already running
+      shell: ps aux | grep "kubectl port-forward.*kibana" | grep -v grep
+      register: kibana_forward_running
+      ignore_errors: true
+      changed_when: false
+
+    - name: Port forward Kibana
+      shell: ./kibana-forward.sh &
+      when: kibana_forward_running.rc != 0
+      args:
+        executable: /bin/bash
+
+    - name: Print Elasticsearch password
+      debug:
+        msg: "Elasticsearch password is: {{ elastic_password }}"
+      when: elastic_password != ""
+
+    # Simply inform the user to run the start-kibana script
+    - name: Inform user about starting Kibana
+      debug:
+        msg: "Setup complete. To access Kibana, please run the command: ./start-kibana.sh"
