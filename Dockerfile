@@ -13,7 +13,9 @@ WORKDIR /app
 # Copy the requirements file and install dependencies
 # This layer is cached unless requirements.txt changes
 RUN python -m venv /opt/venv
-ENV PATH = "".qnaops/bin/activate:$PATH"
+# Activate the virtual environment by adding its bin directory to the PATH
+# This ensures that pip installs into the venv and uvicorn is found from the venv
+ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -24,13 +26,20 @@ FROM python:3.9-slim
 # Set the working directory in the final image
 WORKDIR /app
 
-# Copy the installed dependencies from the previous stage
-COPY --from=python_dependencies_base /app /app
+# Copy the virtual environment from the python_dependencies_base stage
+COPY --from=python_dependencies_base /opt/venv /opt/venv
+
+# Activate the virtual environment in the final stage by adding its bin to PATH
+ENV PATH="/opt/venv/bin:$PATH"
+
 
 # Copy your application code into the container
 # This assumes your main application code is in a directory named 'app'
 # relative to your Dockerfile (e.g., app/main.py, app/api/, app/services/)
 COPY ./app /app/app
+
+# Copy your static assets into the container
+COPY ./static /app/static
 
 # Expose the port your FastAPI application listens on
 EXPOSE 8000
