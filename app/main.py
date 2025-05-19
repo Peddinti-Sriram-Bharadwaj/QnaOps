@@ -5,10 +5,11 @@ from fastapi.staticfiles import StaticFiles # For serving UI
 from app.api import v1 as api_v1 # Import the v1 router
 from app.core.database import connect_db, disconnect_db, create_db_tables # Import create_db_tables
 from app.models import models # IMPORTANT: Import your models module so Base knows about them
+from app.api import qa
 
 app = FastAPI(title="QnA Bot")
 
-
+app.include_router(qa.router, prefix="/qa/v1", tags=["Q&A System"])
 
 # --- Add startup/shutdown events (ONLY if using 'databases' library) ---
 # We'll also add table creation here.
