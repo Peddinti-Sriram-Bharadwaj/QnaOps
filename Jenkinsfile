@@ -21,41 +21,6 @@ pipeline {
             }
         }
 
-        stage('Fix Jenkins Docker & Minikube Permissions') {
-            steps {
-                sh '''
-                echo "🛠️ Fixing Jenkins user permissions..."
-                echo "Current user: $(whoami)"
-
-                # Add Jenkins to docker group
-                # NOTE: Adding a user to a group often requires a new login session or service restart
-                # for the group membership to take full effect. This step is best handled
-                # during agent provisioning rather than in each pipeline run for immediate effect.
-                # Ensure the 'jenkins' user exists on the agent.
-                if id -u jenkins > /dev/null 2>&1; then
-                    sudo usermod -aG docker jenkins || echo "WARN: Could not add jenkins to docker group, or already a member. This might require manual intervention or agent restart."
-                else
-                    # If the agent runs as a user other than 'jenkins', this check is important.
-                    # You might want to adapt this logic if your agent user is different.
-                    echo "WARN: User 'jenkins' not found. Skipping add to docker group."
-                fi
-
-                # Create required directories for minikube & kube if not present
-                echo "Creating .kube and .minikube directories in ${WORKSPACE_DIR}"
-                sudo mkdir -p ${WORKSPACE_DIR}/.kube
-                sudo mkdir -p ${WORKSPACE_DIR}/.minikube
-
-                # Set ownership and permissions - ensure 'jenkins' user owns these
-                # These directories are typically owned by the user running the Jenkins agent process.
-                # Assuming 'jenkins:jenkins' is appropriate.
-                echo "Setting ownership and permissions for .kube and .minikube directories in ${WORKSPACE_DIR}"
-                sudo chown -R jenkins:jenkins ${WORKSPACE_DIR}/.kube
-                sudo chown -R jenkins:jenkins ${WORKSPACE_DIR}/.minikube
-                sudo chmod -R u+wrx ${WORKSPACE_DIR}/.kube
-                sudo chmod -R u+wrx ${WORKSPACE_DIR}/.minikube
-                '''
-            }
-        }
 
         stage('Setup ELK Stack') {
             steps {
