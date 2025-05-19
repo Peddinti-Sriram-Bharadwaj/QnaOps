@@ -1,11 +1,8 @@
 pipeline {
-    agent any // Ensure this agent has kubectl, docker, and git/scm tools installed and configured.
-    tools {
-        kubectl 'default-kubectl'
-    }
+    agent any
     environment {
         APP_DEPLOYMENT_NAME = 'fastapi-app'
-        APP_NAMESPACE = 'default' // Adjust if your application is in a different namespace
+        APP_NAMESPACE = 'default'
         WORKSPACE_DIR = "${env.WORKSPACE}"
         MINIKUBE_IP = "localhost"
         MINIKUBE_PORT = "32000"
@@ -23,13 +20,12 @@ pipeline {
                 script {
                     echo 'Configuring kubectl context...'
                     // Configure kubectl to use Minikube
-                    sh 'kubectl config use-context minikube'
-                    
-                    echo 'Applying ELK Stack configuration...'
                     sh '''
-                        # Set up cluster access
-                        kubectl config set-cluster minikube \
-                            --server=https://${MINIKUBE_IP}:${MINIKUBE_PORT}
+                        # Verify kubectl installation
+                        command -v kubectl
+                        
+                        # Configure cluster access
+                        kubectl config use-context minikube
                         
                         # Apply ELK configuration
                         kubectl apply -f elk_stack_setup.yaml
