@@ -1,16 +1,20 @@
-FROM python:3.10-slim
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy requirements first for layer caching
+# Copy the dependencies file to the working directory
 COPY requirements.txt .
+
+# Install any dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code AND the static directory
+# Copy the content of the local src directory to the working directory
 COPY ./app /app/app
-COPY ./static /app/static  
 
-# Expose port and define command (as before)
-EXPOSE 8000
+# Specify the command to run on container start
+# Ensure API_PORT from your ConfigMap is used by Uvicorn if not hardcoding here.
+# The k8s deployment already specifies command and args, so this CMD might be overridden
+# but it's good practice for local Docker runs.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-

@@ -1,42 +1,29 @@
 # app/api/v1/endpoints/qa.py
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
-from app.crud import qa_crud as crud # Renamed import for clarity
-from app.models import schemas
+from app.crud import qa_crud as crud
+from app.models import schemas # schemas used by feedback/popular endpoints
+from app.models.schemas import QARequest, QAResponse # schemas for /ask endpoint
+from app.services.qna_engine import get_answer # service for /ask endpoint
 # from sqlalchemy.ext.asyncio import AsyncSession # Uncomment if using SQLAlchemy sessions
 # from app.core.database import get_db # Uncomment if using SQLAlchemy sessions
 
 router = APIRouter()
 
-# --- Your Existing QnA Logic (Modified) ---
-@router.post("/ask", response_model=schemas.AnswerOutput)
-async def ask_question(
-    payload: schemas.QuestionInput,
-    # db: AsyncSession = Depends(get_db) # Uncomment if using SQLAlchemy sessions
-):
+# Endpoint using the qna_engine
+@router.post("/ask", response_model=QAResponse) # Changed path slightly for consistency
+async def process_question_answer(request: QARequest):
     """
-    Receives a question, gets an answer (placeholder/model),
-    stores it, and returns answer with QA ID.
+    Receives a question and context, and returns an answer using the QnA engine.
     """
-    question = payload.question
-    # --- Placeholder for getting the actual answer ---
-    # answer = await get_answer_from_model(question) # Replace with your model call
-    answer = f"This is a placeholder answer for '{question}'."
-    # -------------------------------------------------
+    answer_text = get_answer(
+        context=request.context,
+        question=request.question,
+        model_version=request.model_version
+    )
+    return QAResponse(answer=answer_text)
 
-    if not answer:
-         raise HTTPException(status_code=404, detail="Could not generate an answer.")
-
-    try:
-        # Pass db session if using SQLAlchemy CRUD functions
-        qa_id = await crud.create_qa_entry(question=question, answer=answer)
-        return schemas.AnswerOutput(qa_id=qa_id, question=question, answer=answer)
-    except Exception as e:
-        # Add proper logging here
-        print(f"Error saving Q&A: {e}") # Replace with logger
-        raise HTTPException(status_code=500, detail="Failed to store Q&A pair.")
-
-# --- New Endpoints ---
+# --- Endpoints for feedback, sharing, and popular questions ---
 
 @router.post("/feedback/{qa_id}", status_code=status.HTTP_201_CREATED)
 async def submit_feedback(

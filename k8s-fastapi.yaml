@@ -17,7 +17,7 @@ kind: Deployment
 metadata:
   name: fastapi-app
 spec:
-  replicas: 2 # Start with 2, scale as needed
+  replicas: 1 # Start with 2, scale as needed
   selector:
     matchLabels:
       app: fastapi-app
@@ -26,6 +26,56 @@ spec:
       labels:
         app: fastapi-app
     spec:
+      volumes: # Define the volume using the PVC
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc # This must match the name in k8s-model-pvc.yaml
+      initContainers:
+      - name: download-model
+        image: python:3.9-slim # A small python image suitable for running the download script
+        env:
+        - name: HF_MODEL_NAME
+          value: "ashutoshj01/bert-finetuned-squad" # <--- Ensure this is the model you want to use
+        - name: MODEL_STORAGE_PATH
+          value: "/mnt/model" # This path must match the mountPath below and model_path in qna_engine.py
+        # If your model is private or requires authentication, uncomment and configure HF_TOKEN:
+        # - name: HF_TOKEN
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: huggingface-secret # You'd need to create a secret named 'huggingface-secret'
+        #       key: token # The key within the secret holding your Hugging Face token
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Install huggingface-hub and its dependencies
+          pip install --no-cache-dir huggingface-hub && \
+          # Run a Python script to download the model if it doesn't exist
+          python -c "
+          import os
+          from huggingface_hub import snapshot_download
+          from pathlib import Path
+
+          MODEL_NAME = os.environ.get('HF_MODEL_NAME')
+          MODEL_PATH = Path(os.environ.get('MODEL_STORAGE_PATH'))
+
+          # Simple check: see if any common model file types exist in the path
+          # This avoids re-downloading if the model is already there
+          if not any(MODEL_PATH.glob(f'*.{ext}') for ext in ['bin', 'h5', 'safetensors', 'json', 'txt']):
+              print(f'Model not found at {MODEL_PATH}. Downloading {MODEL_NAME}...')
+              snapshot_download(
+                  repo_id=MODEL_NAME,
+                  local_dir=str(MODEL_PATH),
+                  local_dir_use_symlinks=False, # Important for ensuring files are copied, not symlinked
+                  # token=os.environ.get('HF_TOKEN') # Uncomment if using HF_TOKEN env var
+              )
+              print(f'Model {MODEL_NAME} downloaded to {MODEL_PATH}')
+          else:
+              print(f'Model already exists at {MODEL_PATH}. Skipping download.')
+          "
+        volumeMounts: # Mount the PVC into the init container
+        - name: model-storage
+          mountPath: /mnt/model # This path must match MODEL_STORAGE_PATH env var
       containers:
         - name: fastapi-app
           image: sriram9217/major_proj-fastapi-app:latest # Replace with your actual image
@@ -37,6 +87,9 @@ spec:
                 name: app-config # Load non-sensitive config
             - secretRef:
                 name: app-secrets # Load secrets and connection details
+          volumeMounts: # Mount the PVC into the main container
+            - name: model-storage
+              mountPath: /mnt/model # This is where the model will be available, matching MODEL_DIR in qa_service.py
           # The command uses the API_HOST and API_PORT from the mounted config
           # Ensure your app reads these from the environment
           command: ["uvicorn"]
@@ -44,11 +97,11 @@ spec:
           # --- Resource Requests and Limits ---
           resources:
             requests:
-              memory: "128Mi" # Request 128 Megabytes of RAM
-              cpu: "100m"    # Request 0.1 CPU core (100 millicores) - IMPORTANT FOR HPA
+              memory: "1Gi" # Request 1 Gigabyte of RAM (Adjust as needed)
+              cpu: "0.5"    # Request 0.1 CPU core (100 millicores) - IMPORTANT FOR HPA
             limits:
-              memory: "512Mi" # Limit RAM usage to 512 Megabytes
-              cpu: "500m"    # Limit CPU usage to 0.5 CPU core
+              memory: "2Gi" # Limit RAM usage to 512 Megabytes
+              cpu: "1"    # Limit CPU usage to 0.5 CPU core
           # ------------------------------------
           # Add readiness/liveness probes for better health checking
           readinessProbe:
