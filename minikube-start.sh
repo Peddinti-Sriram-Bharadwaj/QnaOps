@@ -1,1 +1,1 @@
-minikube start --memory=8192 --cpus=4 --mount-string="$HOME:/data" --mount
+minikube start --driver=docker --cpus=4 --memory=8192m --mount --mount-string="/Users/srirambharadwaj:/data"

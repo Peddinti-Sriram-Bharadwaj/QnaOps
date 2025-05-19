@@ -1,14 +1,7 @@
 from fastapi import APIRouter, Depends
-from app.models.schemas import QARequest, QAResponse
-from app.services.qna_engine import get_answer
 
 router = APIRouter()
 
-@router.post("/answer/", response_model = QAResponse)
-def answer_query(request: QARequest):
-    answer = get_answer(
-        context = request.context, 
-        question = request.question, 
-        model_version = request.model_version
-    )
-    return {"answer": answer}
+# This file can be used to aggregate other v1 routers if needed,
+# or can be removed if all v1 endpoints are within specific modules like qa.py.
+# For now, we'll leave it minimal.
