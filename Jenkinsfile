@@ -1,5 +1,6 @@
 pipeline {
     agent any // Ensure this agent has kubectl, docker, and git/scm tools installed and configured.
+    tools { kubectl 'default-kubectl' }
 
     environment {
         // Define your application's deployment name and namespace
