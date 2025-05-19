@@ -12,6 +12,8 @@ WORKDIR /app
 
 # Copy the requirements file and install dependencies
 # This layer is cached unless requirements.txt changes
+RUN python -m venv /opt/venv
+ENV PATH = "".qnaops/bin/activate:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -36,4 +38,6 @@ EXPOSE 8000
 # Command to run your FastAPI application using Uvicorn
 # This assumes your FastAPI application instance is named 'app'
 # and is located in 'app/main.py'
+
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
