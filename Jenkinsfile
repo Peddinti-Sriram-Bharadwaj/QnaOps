@@ -28,13 +28,15 @@ pipeline {
                 echo "Current user: $(whoami)"
 
                 # Add Jenkins to docker group
-                # This command might require a restart of the Jenkins agent process or a new login session
-                # for the group membership to take effect. This might not be effective immediately
-                # within the same pipeline run if the agent isn't restarted.
+                # NOTE: Adding a user to a group often requires a new login session or service restart
+                # for the group membership to take full effect. This step is best handled
+                # during agent provisioning rather than in each pipeline run for immediate effect.
                 # Ensure the 'jenkins' user exists on the agent.
                 if id -u jenkins > /dev/null 2>&1; then
                     sudo usermod -aG docker jenkins || echo "WARN: Could not add jenkins to docker group, or already a member. This might require manual intervention or agent restart."
                 else
+                    # If the agent runs as a user other than 'jenkins', this check is important.
+                    # You might want to adapt this logic if your agent user is different.
                     echo "WARN: User 'jenkins' not found. Skipping add to docker group."
                 fi
 
@@ -44,8 +46,8 @@ pipeline {
                 sudo mkdir -p ${WORKSPACE_DIR}/.minikube
 
                 # Set ownership and permissions - ensure 'jenkins' user owns these
-                # The group can be 'jenkins' or 'docker' depending on your setup needs.
-                # Using 'jenkins:jenkins' is generally safer for these specific config dirs.
+                # These directories are typically owned by the user running the Jenkins agent process.
+                # Assuming 'jenkins:jenkins' is appropriate.
                 echo "Setting ownership and permissions for .kube and .minikube directories in ${WORKSPACE_DIR}"
                 sudo chown -R jenkins:jenkins ${WORKSPACE_DIR}/.kube
                 sudo chown -R jenkins:jenkins ${WORKSPACE_DIR}/.minikube
