@@ -1,0 +1,50 @@
+---
+- name: Deploy Postgres and Redis with Vault Secrets
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - secrets.yaml
+
+  tasks:
+    - name: Create Kubernetes secret for Postgres
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: postgres-secret
+            namespace: default
+          stringData:
+            POSTGRES_USER: "{{ postgres_user }}"
+            POSTGRES_PASSWORD: "{{ postgres_password }}"
+
+    - name: Create Kubernetes secret for Redis
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: redis-secret
+            namespace: default
+          stringData:
+            REDIS_PASSWORD: "{{ redis_password }}"
+
+    - name: Apply Postgres StatefulSet and PVC
+      kubernetes.core.k8s:
+        state: present
+        src: ../k8s/postgres.yaml
+
+    - name: Apply Redis StatefulSet and PVC
+      kubernetes.core.k8s:
+        state: present
+        src: ../k8s/redis.yaml
+
+    - name: Apply FastAPI Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: ../k8s/fastapi-deployment.yaml
+

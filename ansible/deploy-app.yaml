@@ -1,0 +1,13 @@
+- name: Apply FastAPI Deployment
+  kubernetes.core.k8s:
+    state: present
+    src: ../k8s/fastapi-deployment.yaml
+- name: Create NGINX configmap
+  kubernetes.core.k8s:
+    state: present
+    src: ../k8s/nginx-configmap.yaml
+
+- name: Apply NGINX Deployment
+  kubernetes.core.k8s:
+    state: present
+    src: ../k8s/nginx-deployment.yaml
