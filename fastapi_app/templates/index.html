@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Question Submit</title>
+</head>
+<body>
+    <h1>Ask a Question</h1>
+    <form action="/submit" method="post">
+        <label>Context:</label><br>
+        <textarea name="context" rows="4" cols="50"></textarea><br>
+        <label>Question:</label><br>
+        <input type="text" name="question"><br><br>
+        <input type="submit" value="Submit">
+    </form>
+
+    <h2>Submitted Questions:</h2>
+    <ul>
+    {% for q in questions %}
+        <li><b>Q:</b> {{ q.question }} <br><b>Context:</b> {{ q.context }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

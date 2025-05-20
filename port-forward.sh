@@ -1,1 +1,0 @@
-kubectl port-forward service/fastapi-service 8000:80
