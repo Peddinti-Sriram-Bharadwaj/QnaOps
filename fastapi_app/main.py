@@ -7,11 +7,18 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
 
+
+import logging
+import sys
+import json_log_formatter
+
 POSTGRES_HOST = os.environ["POSTGRES_HOST"]
 POSTGRES_USER = os.environ["POSTGRES_USER"]
 POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 REDIS_HOST = os.environ["REDIS_HOST"]
 REDIS_PASSWORD = os.environ["REDIS_PASSWORD"]
+
+
 
 r = redis.Redis(host=REDIS_HOST, port=6379, password=REDIS_PASSWORD, decode_responses=True)
 
@@ -30,6 +37,15 @@ cursor.execute("""
     )
 """)
 conn.commit()
+
+formatter = json_log_formatter.JSONFormatter()
+
+json_handler = logging.StreamHandler(sys.stdout)
+json_handler.setFormatter(formatter)
+
+logger = logging.getLogger("uvicorn.access")
+logger.addHandler(json_handler)
+logger.setLevel(logging.INFO)
 
 
 templates = Jinja2Templates(directory="templates")
