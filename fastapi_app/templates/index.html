@@ -13,10 +13,18 @@
         <input type="submit" value="Submit">
     </form>
 
+    {% if answer %}
+        <h2>Answer:</h2>
+        <p><b>{{ answer }}</b></p>
+    {% endif %}
+
     <h2>Submitted Questions:</h2>
     <ul>
     {% for q in questions %}
-        <li><b>Q:</b> {{ q.question }} <br><b>Context:</b> {{ q.context }}</li>
+        <li>
+            <b>Q:</b> {{ q.question }} <br>
+            <b>Context:</b> {{ q.context }}
+        </li>
     {% endfor %}
     </ul>
 </body>
