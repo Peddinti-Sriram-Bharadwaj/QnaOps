@@ -5,14 +5,17 @@
     - name: Apply nginx ConfigMap
       k8s:
         state: present
-        definition: "{{ lookup('file', '../k8s/nginx-configmap.yaml') }}"
+        definition: "{{ lookup('file', '../k8s/nginx-configmap.yaml') | from_yaml }}"
+        namespace: default   # ✅ Required
 
     - name: Apply fastapi deployment and service
       k8s:
         state: present
-        definition: "{{ lookup('file', '../k8s/fastapi-deployment.yaml') }}"
+        definition: "{{ lookup('file', '../k8s/fastapi-deployment.yaml') | from_yaml }}"
+        namespace: default   # ✅ Required
 
     - name: Apply nginx deployment and service
       k8s:
         state: present
-        definition: "{{ lookup('file', '../k8s/nginx-deployment.yaml') }}"
+        definition: "{{ lookup('file', '../k8s/nginx-deployment.yaml') | from_yaml }}"
+        namespace: default   # ✅ Required
