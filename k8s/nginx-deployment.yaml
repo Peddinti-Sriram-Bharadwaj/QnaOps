@@ -32,7 +32,7 @@ metadata:
   name: nginx
   namespace: default
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: nginx
   ports:
