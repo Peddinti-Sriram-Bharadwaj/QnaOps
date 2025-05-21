@@ -65,10 +65,16 @@ pipeline {
     post {
         success {
             echo '✅ Deployment successful.'
-            sh './get-url.sh'
+            sh '''
+            nohup ./get-url.sh > get-url.log 2>&1 &
+            echo "Started get-url.sh in the background."
+            echo "Check the URL inside get-url.log."
+            echo "Keep this tunnel running externally (e.g. terminal open)."
+            '''
         }
         failure {
             echo '❌ Deployment failed.'
         }
     }
+
 }
