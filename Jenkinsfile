@@ -43,11 +43,7 @@ pipeline {
         stage('Apply Kubernetes Manifests') {
             steps {
                 sh '''
-                kubectl apply -f k8s/postgres.yaml
-                kubectl apply -f k8s/redis.yaml
-                kubectl apply -f k8s/nginx-configmap.yaml
-                kubectl apply -f k8s/fastapi-deployment.yaml
-                kubectl apply -f k8s/nginx-deployment.yaml
+                kubectl apply -f k8s/
                 '''
             }
         }
