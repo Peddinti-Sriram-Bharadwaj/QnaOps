@@ -38,17 +38,3 @@ spec:
             secretKeyRef:
               name: redis-secret
               key: REDIS_PASSWORD
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: fastapi
-  namespace: default
-spec:
-  selector:
-    app: fastapi
-  ports:
-  - protocol: TCP
-    port: 8000
-    targetPort: 8000
-  type: ClusterIP

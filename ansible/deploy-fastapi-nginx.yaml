@@ -8,11 +8,18 @@
         definition: "{{ lookup('file', '../k8s/nginx-configmap.yaml') | from_yaml }}"
         namespace: default   # ✅ Required
 
-    - name: Apply fastapi deployment and service
+    - name: Apply fastapi deployment
+    k8s:
+      state: present
+      definition: "{{ lookup('file', '../k8s/fastapi-deployment.yaml') | from_yaml }}"
+      namespace: default
+
+    - name: Apply fastapi service
       k8s:
         state: present
-        definition: "{{ lookup('file', '../k8s/fastapi-deployment.yaml') | from_yaml }}"
-        namespace: default   # ✅ Required
+        definition: "{{ lookup('file', '../k8s/fastapi-service.yaml') | from_yaml }}"
+        namespace: default
+
 
     - name: Apply nginx deployment and service
       k8s:
