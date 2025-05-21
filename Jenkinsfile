@@ -2,72 +2,77 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG = "${env.WORKSPACE}/.kube/config"
-        IMAGE_TAG = "latest"
-        VAULT_PASS_FILE = "${env.WORKSPACE}/ansible/vault_pass.txt"  // plaintext file with vault password
+        DOCKER_BUILDKIT = "1"
+        REGISTRY = "localhost:5000" // or your image registry if using one
+        VAULT_PASS = credentials('vault-pass-id') // Jenkins secret text for vault_pass.txt
+    }
+
+    triggers {
+        pollSCM('* * * * *') // Optional: Trigger every minute if not using webhooks
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Setup Minikube Docker Env') {
-            steps {
-                sh 'eval $(minikube docker-env)'
+                git branch: 'main', url: 'https://your.repo.url.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                dir('fastapi-app') {
-                    sh "docker build -t fastapi-app:${IMAGE_TAG} ."
-                }
-                dir('nginx') {
-                    sh "docker build -t nginx-frontend:${IMAGE_TAG} ."
-                }
+                sh './build_and_push.sh'
             }
         }
 
-        stage('Run ELK Setup via Ansible') {
+        stage('Apply Secrets via Ansible Vault') {
             steps {
-                dir('ansible') {
-                    sh 'ansible-playbook elastic_stack_setup.yaml'
-                }
+                sh '''
+                export ANSIBLE_VAULT_PASSWORD_FILE=ansible/vault_pass.txt
+                echo "$VAULT_PASS" > $ANSIBLE_VAULT_PASSWORD_FILE
+                ansible-playbook ansible/deploy-db.yaml
+                ansible-playbook ansible/deploy-fastapi-nginx.yaml
+                '''
             }
         }
 
-        stage('Deploy Postgres and Redis with Vault') {
+        stage('Deploy ELK Stack') {
             steps {
-                dir('ansible') {
-                    // Pass vault password file for decryption
-                    sh "ansible-playbook deploy-db.yaml --vault-password-file ${VAULT_PASS_FILE}"
-                }
+                sh '''
+                export ANSIBLE_VAULT_PASSWORD_FILE=ansible/vault_pass.txt
+                ansible-playbook ansible/elastic_stack_setup.yaml
+                '''
             }
         }
 
-        stage('Deploy FastAPI and NGINX') {
+        stage('Apply Kubernetes Manifests') {
             steps {
-                sh 'kubectl apply -f k8s/fastapi.yaml'
-                sh 'kubectl apply -f k8s/nginx.yaml'
+                sh '''
+                kubectl apply -f k8s/postgres.yaml
+                kubectl apply -f k8s/redis.yaml
+                kubectl apply -f k8s/nginx-configmap.yaml
+                kubectl apply -f k8s/fastapi-deployment.yaml
+                kubectl apply -f k8s/nginx-deployment.yaml
+                '''
             }
         }
 
-        stage('Check Rollouts') {
+        stage('Rolling Restart') {
             steps {
-                sh 'kubectl rollout status deployment/fastapi-app'
-                sh 'kubectl rollout status deployment/nginx-frontend'
-                sh 'kubectl rollout status statefulset/postgres'
-                sh 'kubectl rollout status statefulset/redis'
+                sh '''
+                kubectl rollout restart deployment fastapi
+                kubectl rollout restart deployment nginx
+                '''
             }
         }
     }
 
     post {
+        success {
+            echo '✅ Deployment successful.'
+            sh './get-url.sh'
+        }
         failure {
-            echo 'Deployment failed! Check Jenkins logs.'
+            echo '❌ Deployment failed.'
         }
     }
 }
