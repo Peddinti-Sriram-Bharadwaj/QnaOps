@@ -20,6 +20,15 @@ pipeline {
             }
         }
 
+        stage('Deploy ELK Stack') {
+            steps {
+                sh '''
+                export ANSIBLE_VAULT_PASSWORD_FILE=ansible/vault_pass.txt
+                ansible-playbook ansible/elastic_stack_setup.yaml
+                '''
+            }
+        }
+
         stage('Apply Secrets via Ansible Vault') {
             steps {
                 sh '''
@@ -31,14 +40,7 @@ pipeline {
             }
         }
 
-        stage('Deploy ELK Stack') {
-            steps {
-                sh '''
-                export ANSIBLE_VAULT_PASSWORD_FILE=ansible/vault_pass.txt
-                ansible-playbook ansible/elastic_stack_setup.yaml
-                '''
-            }
-        }
+        
 
         stage('Apply Kubernetes Manifests') {
             steps {
