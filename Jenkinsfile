@@ -7,10 +7,6 @@ pipeline {
         VAULT_PASS = credentials('vault-pass-id') // Jenkins secret text for vault_pass.txt
     }
 
-    triggers {
-        pollSCM('* * * * *') // Optional: Trigger every minute if not using webhooks
-    }
-
     stages {
         stage('Checkout') {
             steps {
