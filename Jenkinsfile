@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_BUILDKIT = "1"
-        REGISTRY = "localhost:5000" // or your image registry if using one
+        REGISTRY = "docker.io/sriram9217" // or your image registry if using one
         VAULT_PASS = credentials('vault-pass-id') // Jenkins secret text for vault_pass.txt
     }
 
@@ -14,7 +14,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://your.repo.url.git'
+                git branch: 'master', url: 'https://github.com/Peddinti-Sriram-Bharadwaj/QnaOps'
             }
         }
 
