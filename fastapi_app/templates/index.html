@@ -172,12 +172,12 @@
       <div class="card-content">
         <form action="/submit" method="post" autocomplete="off">
           <div class="input-field">
-            <textarea id="context" name="context" class="materialize-textarea" required></textarea>
-            <label for="context">Context</label>
+            <textarea id="context" name="context" class="materialize-textarea" required>{{ prev_context or '' }}</textarea>
+            <label for="context" class="active">Context</label>
           </div>
           <div class="input-field">
-            <input id="question" type="text" name="question" required />
-            <label for="question">Question</label>
+            <input id="question" type="text" name="question" value="{{ prev_question or '' }}" required />
+            <label for="question" class="active">Question</label>
           </div>
           <button class="btn waves-effect waves-light btn-glow" type="submit" style="width: 100%;">Submit</button>
         </form>
@@ -247,6 +247,11 @@
       document.querySelector("form").addEventListener("submit", () => {
         M.toast({ html: 'Submitting your question...', classes: 'rounded' });
       });
+    });
+
+     // Ensure Materialize updates the label positions
+    document.addEventListener('DOMContentLoaded', function () {
+      M.updateTextFields();
     });
   </script>
   

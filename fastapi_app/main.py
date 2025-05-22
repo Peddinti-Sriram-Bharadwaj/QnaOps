@@ -76,6 +76,9 @@ async def submit_question(request: Request, context: str = Form(...), question: 
     return templates.TemplateResponse("index.html", {
     "request": request,
     "questions": questions,
-    "answer": answer
+    "answer": answer,
+    "prev_context": context,
+    "prev_question": question
 })
+
 
