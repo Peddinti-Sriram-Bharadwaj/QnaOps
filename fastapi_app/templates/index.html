@@ -37,6 +37,12 @@
       transition: all 0.3s ease;
     }
 
+    .card:hover {
+        box-shadow: 0 0 20px #64b5f6aa, 0 0 40px #64b5f644;
+        transition: box-shadow 0.4s ease;
+        }
+
+
     .dark-mode .card {
       background: rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -133,18 +139,35 @@
         vertical-align: middle;
         margin-right: 4px;
         }
+
+        .hero-line {
+            height: 4px;
+            background: linear-gradient(90deg, #00e5ff, #8e24aa, #00e5ff);
+            background-size: 200% 100%;
+            animation: animateLine 4s linear infinite;
+            border-radius: 2px;
+            margin-bottom: 20px;
+        }
+
+        @keyframes animateLine {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+        }
+
   </style>
 </head>
 <body>
   <div class="container" style="margin-top: 30px;">
-    <div class="toggle-container">
-      <label>
-        <input type="checkbox" id="darkModeToggle" />
-        <span style="color: #00e6e6;">Dark Mode</span>
-      </label>
+    <div class="fixed-action-btn">
+        <a id="darkModeToggle" class="btn-floating btn-large cyan pulse">
+          <i class="material-icons">brightness_6</i>
+        </a>
     </div>
+      
 
-    <h4 class="center-align">Ask a Question</h4>
+    <h4 id="page-title" class="center-align blue-text text-darken-2">Ask a Question</h4>
+    <div class="hero-line"></div>
+
     <div class="card">
       <div class="card-content">
         <form action="/submit" method="post" autocomplete="off">
@@ -184,6 +207,21 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const title = "Ask a Question";
+        let i = 0;
+        const target = document.getElementById("page-title");
+
+        function typeWriter() {
+            if (i < title.length) {
+            target.innerHTML += title.charAt(i);
+            i++;
+            setTimeout(typeWriter, 75);
+            }
+        }
+
+        typeWriter();
+        });
+    document.addEventListener('DOMContentLoaded', function () {
       M.textareaAutoResize(document.getElementById('context'));
 
       const toggle = document.getElementById('darkModeToggle');
@@ -204,6 +242,13 @@
         }
       });
     });
+
+    document.querySelector("form").addEventListener("submit", () => {
+  M.toast({html: 'Submitting your question...', classes: 'rounded'});
+});
+
+    
+
   </script>
 
   <!-- Futuristic Footer -->
