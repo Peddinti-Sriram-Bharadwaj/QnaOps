@@ -26,6 +26,6 @@ docker push sriram9217/fastapi-app:latest
 docker buildx build --platform linux/arm64 \
   -t sriram9217/fastapi-app:buildcache \
   -f fastapi_app/Dockerfile \
-  --target builder \  # Only cache build stage
+  --target builder \
   --push \
   fastapi_app/
