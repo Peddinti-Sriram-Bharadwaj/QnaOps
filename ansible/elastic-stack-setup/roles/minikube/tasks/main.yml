@@ -7,7 +7,7 @@
   changed_when: false
 
 - name: Run Minikube start script
-  script: ../minikube-start.sh
+  script: ../../../../../minikube-start.sh
   when: minikube_status.rc != 0
   register: minikube_start
   
