@@ -8,7 +8,7 @@
     # Add timeout variables for better control
     pod_ready_timeout: 300s
     install_timeout: 600s
-    minikube_path: "/usr/local/bin/minikube"
+    minikube_path: "opt/homebrew/bin/minikube"
 
   tasks:
     # Check if minikube is running before starting it
