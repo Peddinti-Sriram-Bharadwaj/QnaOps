@@ -32,7 +32,7 @@ pipeline {
                     #!/bin/zsh
                     echo "$VAULT_PASS" > "$ANSIBLE_VAULT_PASSWORD_FILE"
                     chmod 600 "$ANSIBLE_VAULT_PASSWORD_FILE"
-                    ansible-playbook ansible/elastic_stack_setup.yaml
+                    ansible/elastic-stack-setup/site.yml
                     """
                 }
             }
