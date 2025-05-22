@@ -32,15 +32,32 @@
       when: minikube_start.changed | default(false)
       changed_when: false
 
-    # Check if namespace exists
+    - name: Wait until the Kubernetes API server is reachable
+      shell: kubectl get --raw /healthz
+      register: apiserver_health
+      until: apiserver_health.rc == 0
+      retries: 30
+      delay: 5
+      changed_when: false
+
+
     - name: Check if namespace exists
-      shell: kubectl get namespace {{ namespace }} --no-headers --ignore-not-found
-      register: namespace_exists
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+      register: namespace_info
+      failed_when: false
       changed_when: false
 
     - name: Create namespace if it doesn't exist
-      shell: kubectl create namespace {{ namespace }}
-      when: namespace_exists.stdout == ""
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+      when: namespace_info.resources | length == 0
+
       
     # Add Elastic Helm repo if not already added
     - name: Check if Elastic Helm repo is added
