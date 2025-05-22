@@ -17,11 +17,3 @@ docker buildx build --platform linux/arm64 \
 docker push sriram9217/fastapi-app:latest \
   --cache-from type=registry,ref=sriram9217/fastapi-app:buildcache \
   --cache-to type=registry,ref=sriram9217/fastapi-app:buildcache,mode=max
-
-# Verify Minikube image load
-if minikube image ls | grep -q "sriram9217/fastapi-app"; then
-  echo "✅ Successfully built and pushed M3-optimized image to Minikube"
-else
-  echo "❌ Image not found in Minikube!" >&2
-  exit 1
-fi
