@@ -24,6 +24,7 @@ pipeline {
             }
         }
 
+
         stage('Deploy ELK Stack') {
             steps {
                 withCredentials([string(credentialsId: 'vault-pass-id', variable: 'VAULT_PASS')]) {
