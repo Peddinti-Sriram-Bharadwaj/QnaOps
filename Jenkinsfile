@@ -232,14 +232,18 @@ pipeline {
     
     post {
         always {
-            script {
-                try {
-                    // Clean up Docker resources
-                    sh 'docker system prune -f'
-                } catch (Exception e) {
-                    echo "Warning: Docker cleanup failed: ${e.getMessage()}"
-                }
-            }
+            // Simple cleanup without shell commands
+            echo "🏁 Pipeline completed"
+            
+            // Use Jenkins built-in workspace cleanup
+            cleanWs(
+                cleanWhenAborted: true,
+                cleanWhenFailure: true,
+                cleanWhenNotBuilt: true,
+                cleanWhenSuccess: true,
+                cleanWhenUnstable: true,
+                deleteDirs: true
+            )
         }
         
         success {
@@ -257,58 +261,22 @@ pipeline {
         }
         
         failure {
+            // Keep error handling simple in post section
             echo '''
                 ❌ Deployment failed!
                 
-                🔄 Attempting automatic rollback...
+                Please check the logs above for details.
+                Consider running the following commands manually:
+                
+                🔄 Manual Rollback Commands:
+                kubectl rollout undo deployment/fastapi
+                kubectl rollout undo deployment/nginx
+                
+                🔍 Debug Commands:
+                kubectl get pods -n ${NAMESPACE}
+                kubectl describe deployment fastapi -n ${NAMESPACE}
+                kubectl logs -l app=fastapi -n ${NAMESPACE}
             '''
-            
-            script {
-                try {
-                    // Use Kubernetes native rollback instead of backup files
-                    sh '''
-                        echo "🔄 Rolling back to previous revision..."
-                        
-                        # Check if deployments exist and have rollout history
-                        if kubectl get deployment fastapi -n ${NAMESPACE} >/dev/null 2>&1; then
-                            FASTAPI_REVISION=$(kubectl rollout history deployment/fastapi -n ${NAMESPACE} | tail -n 2 | head -n 1 | awk '{print $1}')
-                            if [ ! -z "$FASTAPI_REVISION" ] && [ "$FASTAPI_REVISION" -gt 1 ]; then
-                                echo "Rolling back FastAPI to revision $((FASTAPI_REVISION-1))..."
-                                kubectl rollout undo deployment/fastapi -n ${NAMESPACE}
-                                kubectl rollout status deployment/fastapi -n ${NAMESPACE} --timeout=180s
-                            else
-                                echo "⚠️ No previous FastAPI revision to rollback to"
-                            fi
-                        fi
-                        
-                        if kubectl get deployment nginx -n ${NAMESPACE} >/dev/null 2>&1; then
-                            NGINX_REVISION=$(kubectl rollout history deployment/nginx -n ${NAMESPACE} | tail -n 2 | head -n 1 | awk '{print $1}')
-                            if [ ! -z "$NGINX_REVISION" ] && [ "$NGINX_REVISION" -gt 1 ]; then
-                                echo "Rolling back Nginx to revision $((NGINX_REVISION-1))..."
-                                kubectl rollout undo deployment/nginx -n ${NAMESPACE}
-                                kubectl rollout status deployment/nginx -n ${NAMESPACE} --timeout=180s
-                            else
-                                echo "⚠️ No previous Nginx revision to rollback to"
-                            fi
-                        fi
-                        
-                        echo "✅ Rollback completed using Kubernetes rollout history"
-                    '''
-                } catch (Exception e) {
-                    echo "❌ Rollback also failed: ${e.getMessage()}"
-                    
-                    // As last resort, try to delete failed pods to trigger recreation
-                    try {
-                        sh '''
-                            echo "🚨 Last resort: Deleting failing pods..."
-                            kubectl delete pods -l app=fastapi -n ${NAMESPACE} --force --grace-period=0 2>/dev/null || true
-                            kubectl delete pods -l app=nginx -n ${NAMESPACE} --force --grace-period=0 2>/dev/null || true
-                        '''
-                    } catch (Exception e2) {
-                        echo "❌ Even pod deletion failed: ${e2.getMessage()}"
-                    }
-                }
-            }
             
             // Send failure notification (if configured)
             // slackSend(color: 'danger', message: "❌ Deployment failed for ${env.JOB_NAME} #${env.BUILD_NUMBER}")
