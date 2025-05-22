@@ -11,7 +11,11 @@
   <!-- Materialize CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
 
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
     body {
       font-family: 'Orbitron', sans-serif;
       background: linear-gradient(to right, #0f2027, #203a43, #2c5364) !important;
@@ -92,6 +96,43 @@
     .dark-mode .input-field label {
       color: #b0bec5 !important;
     }
+
+    .futuristic-footer {
+        margin-top: 50px;
+        padding: 25px 10px;
+        border-radius: 16px;
+        background: rgba(18, 18, 18, 0.6);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-family: 'Share Tech Mono', monospace;
+        color: #90caf9;
+        }
+
+        .footer-title {
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+        color: #64b5f6;
+        }
+
+        .footer-links a {
+        display: inline-block;
+        margin: 5px 10px;
+        color: #00e5ff;
+        text-decoration: none;
+        transition: color 0.3s, text-shadow 0.3s;
+        }
+
+        .footer-links a:hover {
+        color: #ffffff;
+        text-shadow: 0 0 8px #00e5ff;
+        }
+
+        .material-icons.tiny {
+        font-size: 14px;
+        vertical-align: middle;
+        margin-right: 4px;
+        }
   </style>
 </head>
 <body>
@@ -164,5 +205,27 @@
       });
     });
   </script>
+
+  <!-- Futuristic Footer -->
+<footer class="center-align futuristic-footer z-depth-1">
+    <div class="footer-content">
+      <p class="footer-title">Built with ✨ by</p>
+      <div class="footer-links">
+        <a href="https://github.com/Peddinti-Sriram-Bharadwaj/QnaOps" target="_blank" class="glow-link">
+          <i class="material-icons tiny">code</i> Sriram’s GitHub
+        </a>
+        <a href="https://github.com/Ashutosh-Jadhav/ML_Ops" target="_blank" class="glow-link">
+          <i class="material-icons tiny">memory</i> Ashutosh’s GitHub
+        </a>
+        <a href="https://www.linkedin.com/in/sriram-bharadwaj-p/" target="_blank" class="glow-link">
+          <i class="material-icons tiny">person</i> Sriram
+        </a>
+        <a href="https://www.linkedin.com/in/ashutosh-jadhav-380a781a4/" target="_blank" class="glow-link">
+          <i class="material-icons tiny">person</i> Ashutosh
+        </a>
+      </div>
+    </div>
+  </footer>
+  
 </body>
 </html>
