@@ -6,9 +6,56 @@
   <title>Question Submit</title>
   <!-- Materialize CSS CDN -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
+  <style>
+    /* Dark mode overrides */
+    body.dark-mode {
+      background-color: #121212 !important;
+      color: #e0e0e0 !important;
+    }
+    body.dark-mode .card {
+      background-color: #1e1e1e !important;
+      color: #e0e0e0 !important;
+      box-shadow: none !important;
+    }
+    body.dark-mode .collection-item {
+      background-color: #1e1e1e !important;
+      color: #e0e0e0 !important;
+    }
+    body.dark-mode .input-field input,
+    body.dark-mode .input-field textarea {
+      background-color: #2c2c2c !important;
+      color: #e0e0e0 !important;
+      border-bottom: 1px solid #64b5f6 !important;
+    }
+    body.dark-mode .input-field input[type=text]:focus + label,
+    body.dark-mode .input-field textarea.materialize-textarea:focus + label {
+      color: #64b5f6 !important;
+    }
+    body.dark-mode .btn.blue.darken-2 {
+      background-color: #64b5f6 !important;
+    }
+    body.dark-mode h4,
+    body.dark-mode h5 {
+      color: #90caf9 !important;
+    }
+    /* Toggle container positioning */
+    .toggle-container {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body class="grey lighten-4">
-  <div class="container" style="margin-top: 50px;">
+  <div class="container" style="margin-top: 30px;">
+    <div class="toggle-container">
+      <label>
+        <input type="checkbox" id="darkModeToggle" />
+        <span>Dark Mode</span>
+      </label>
+    </div>
+
     <h4 class="center-align blue-text text-darken-2">Ask a Question</h4>
     <div class="card">
       <div class="card-content">
@@ -44,11 +91,32 @@
     </ul>
   </div>
 
-  <!-- Materialize JS CDN for proper textarea resize and other components -->
+  <!-- Materialize JS CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Auto-resize the textarea
       M.textareaAutoResize(document.getElementById('context'));
+
+      const toggle = document.getElementById('darkModeToggle');
+      const body = document.body;
+
+      // Load saved preference from localStorage
+      if (localStorage.getItem('darkMode') === 'enabled') {
+        body.classList.add('dark-mode');
+        toggle.checked = true;
+      }
+
+      toggle.addEventListener('change', () => {
+        if (toggle.checked) {
+          body.classList.add('dark-mode');
+          localStorage.setItem('darkMode', 'enabled');
+        } else {
+          body.classList.remove('dark-mode');
+          localStorage.setItem('darkMode', 'disabled');
+        }
+      });
     });
   </script>
 </body>
