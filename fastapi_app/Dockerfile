@@ -1,43 +1,69 @@
-# Use an official Python runtime as a base image
-FROM python:3.10-slim as builder
+# Stage 1: ARM64-optimized builder
+FROM --platform=linux/arm64 python:3.10-slim-bookworm as builder
 
-# Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+# M3-specific optimizations
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UVICORN_WORKERS=4  
+
+# Install system dependencies with ARM64 optimizations
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libjpeg-dev libopenblas-dev \  
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install system dependencies only if needed (example: for psycopg2, you might need libpq-dev)
-# RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev && rm -rf /var/lib/apt/lists/*
-
-# Copy only requirements first to leverage Docker cache
+# Install Python dependencies with M3-optimized wheels
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --user -r requirements.txt
+    pip install --user --extra-index-url https://rospypi.github.io/simple/ \ 
+    -r requirements.txt
 
-# --- Multi-stage build for a smaller final image ---
-FROM python:3.10-slim
+# Stage 2: Minimal production image
+FROM --platform=linux/arm64 python:3.10-slim-bookworm
 
 WORKDIR /app
 
-# Copy installed Python packages from builder
-COPY --from=builder /root/.local /root/.local
+# Copy Python env from builder
+COPY --from=builder --chown=1000:1000 /root/.local /home/appuser/.local
 COPY --from=builder /app/requirements.txt .
 
-# Ensure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# M3-specific environment tuning
+ENV PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONOPTIMIZE=2 \  
+    OPENBLAS_NUM_THREADS=4 \  
+    UVICORN_THREADS=2 
 
-# Copy application code
-COPY main.py .
-COPY templates/ ./templates/
+# Create optimized non-root user
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home /home/appuser \
+    --uid 1000 \
+    appuser && \
+    chown -R appuser:appuser /app
 
-# Expose the port (documentation only, does not publish it)
-EXPOSE 8000
-
-# Run as a non-root user for security
-RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
-# Run Uvicorn (adjust workers if needed for production)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy application
+COPY --chown=appuser:appuser main.py .
+COPY --chown=appuser:appuser templates/ ./templates/
+
+# Health check with fast timeout
+HEALTHCHECK --interval=10s --timeout=2s --start-period=5s \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+# Maximum-performance UVicorn config for M3
+CMD ["uvicorn", "main:app", \
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--workers", "4", \              
+    "--loop", "uvloop", \             
+    "--http", "httptools", \          
+    "--no-access-log", \              
+    "--timeout-keep-alive", "5"]     
