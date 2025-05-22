@@ -11,16 +11,42 @@
 
   tasks:
     # Check if minikube is running before starting it
-    - name: Check if minikube is running
-      shell: minikube status | grep -q "Running"
+    - name: Verify ARM64 Minikube binary
+      stat:
+        path: "{{ minikube_path }}"
+      register: minikube_binary
+
+    - name: Fail if Minikube not found
+      fail:
+        msg: "Minikube not found at {{ minikube_path }} - install via 'brew install minikube'"
+      when: not minikube_binary.stat.exists
+
+    - name: Start Minikube with Docker driver
+      command: >
+        {{ minikube_path }} start 
+        --driver=docker 
+        --cpus=4 
+        --memory=8192m
+        --container-runtime=containerd
+        --force-systemd=true
+      environment:
+        PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
+        MINIKUBE_HOME: "{{ ansible_env.HOME }}/.minikube"
+        KUBECONFIG: "{{ ansible_env.HOME }}/.minikube/config"
+      register: minikube_start
+      changed_when: "'Done!' in minikube_start.stdout"
+      failed_when: 
+        - "'Error' in minikube_start.stderr"
+        - "'failed' in minikube_start.stderr"
+
+    - name: Verify cluster status
+      command: "{{ minikube_path }} status"
       register: minikube_status
-      ignore_errors: true
       changed_when: false
 
-    - name: Run Minikube start script
-      script: ../minikube-start.sh
-      when: minikube_status.rc != 0
-      register: minikube_start
+    - name: Display status
+      debug:
+        var: minikube_status.stdout_lines
       
     # Wait for minikube to be fully ready
     - name: Wait for minikube to be fully ready
