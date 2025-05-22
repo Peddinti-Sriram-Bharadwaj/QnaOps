@@ -1,31 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Question Submit</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Question Submit</title>
+  <!-- Materialize CSS CDN -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
 </head>
-<body>
-    <h1>Ask a Question</h1>
-    <form action="/submit" method="post">
-        <label>Context:</label><br>
-        <textarea name="context" rows="4" cols="50"></textarea><br>
-        <label>Question:</label><br>
-        <input type="text" name="question"><br><br>
-        <input type="submit" value="Submit">
-    </form>
+<body class="grey lighten-4">
+  <div class="container" style="margin-top: 50px;">
+    <h4 class="center-align blue-text text-darken-2">Ask a Question</h4>
+    <div class="card">
+      <div class="card-content">
+        <form action="/submit" method="post" autocomplete="off">
+          <div class="input-field">
+            <textarea id="context" name="context" class="materialize-textarea" required></textarea>
+            <label for="context">Context</label>
+          </div>
+          <div class="input-field">
+            <input id="question" type="text" name="question" required />
+            <label for="question">Question</label>
+          </div>
+          <button class="btn waves-effect waves-light blue darken-2" type="submit" style="width: 100%;">Submit</button>
+        </form>
+      </div>
+    </div>
 
     {% if answer %}
-        <h2>Answer:</h2>
-        <p><b>{{ answer }}</b></p>
+    <div class="card blue lighten-5 blue-text text-darken-4" style="padding: 20px; margin-top: 30px;">
+      <h5>Answer:</h5>
+      <p><b>{{ answer }}</b></p>
+    </div>
     {% endif %}
 
-    <h2>Submitted Questions:</h2>
-    <ul>
-    {% for q in questions %}
-        <li>
-            <b>Q:</b> {{ q.question }} <br>
-            <b>Context:</b> {{ q.context }}
-        </li>
-    {% endfor %}
+    <h5 class="blue-text text-darken-2" style="margin-top: 40px;">Submitted Questions:</h5>
+    <ul class="collection">
+      {% for q in questions %}
+      <li class="collection-item">
+        <b>Q:</b> {{ q.question }}<br />
+        <b>Context:</b> {{ q.context }}
+      </li>
+      {% endfor %}
     </ul>
+  </div>
+
+  <!-- Materialize JS CDN for proper textarea resize and other components -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      M.textareaAutoResize(document.getElementById('context'));
+    });
+  </script>
 </body>
 </html>
