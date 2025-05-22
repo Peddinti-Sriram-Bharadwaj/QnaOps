@@ -19,7 +19,7 @@ pipeline {
         stage('Build & Push Docker Images') {
             steps {
                 sh '''
-                ../build_and_push.sh
+                ./build_and_push.sh
                 '''
             }
         }
