@@ -26,10 +26,13 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONOPTIMIZE=2 \
     UVICORN_THREADS=2
 
-RUN groupadd -g 1000 appuser && \
-    useradd -u 1000 -g appuser -d /home/appuser -s /bin/false appuser && \
-    mkdir -p /home/appuser && \
-    chown -R appuser:appuser /app /home/appuser
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home /home/appuser \
+    --uid 1000 \
+    appuser && \
+    chown -R appuser:appuser /app
 
 USER appuser
 COPY --chown=appuser:appuser main.py .
