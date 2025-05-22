@@ -1,0 +1,58 @@
+---
+# Check if minikube is running before starting it
+- name: Check if minikube is running
+  shell: minikube status | grep -q "Running"
+  register: minikube_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Run Minikube start script
+  script: ../minikube-start.sh
+  when: minikube_status.rc != 0
+  register: minikube_start
+  
+# Wait for minikube to be fully ready
+- name: Wait for minikube to be fully ready
+  shell: kubectl get nodes --no-headers | grep -q " Ready "
+  register: node_ready
+  until: node_ready.rc == 0
+  retries: 30
+  delay: 10
+  when: minikube_start.changed | default(false)
+  changed_when: false
+
+- name: Wait until the Kubernetes API server is reachable
+  shell: kubectl get --raw /healthz
+  register: apiserver_health
+  until: apiserver_health.rc == 0
+  retries: 30
+  delay: 5
+  changed_when: false
+
+- name: Check if namespace exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ namespace }}"
+  register: namespace_info
+  failed_when: false
+  changed_when: false
+
+- name: Create namespace if it doesn't exist
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ namespace }}"
+    state: present
+  when: namespace_info.resources | length == 0
+
+# Add Elastic Helm repo if not already added
+- name: Check if Elastic Helm repo is added
+  shell: helm repo list | grep -q "elastic"
+  register: elastic_repo_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Add Elastic Helm repo
+  shell: helm repo add elastic https://helm.elastic.co && helm repo update
+  when: elastic_repo_exists.rc != 0

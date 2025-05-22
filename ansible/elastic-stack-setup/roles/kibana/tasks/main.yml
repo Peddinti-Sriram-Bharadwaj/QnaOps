@@ -1,0 +1,23 @@
+---
+- name: Check if Kibana is installed
+  shell: helm list -n {{ namespace }} -q | grep -w kibana
+  register: kibana_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Kibana
+  shell: |
+    helm install kibana elastic/kibana -n {{ namespace }} \
+    --set service.type=LoadBalancer \
+    --set elasticsearch.hosts=https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200 \
+    --set elasticsearch.username=elastic \
+    --set elasticsearch.password="{{ elastic_password }}" \
+    --set ingress.enabled=false \
+    --timeout {{ install_timeout }}
+  when: kibana_exists.rc != 0 and elastic_password != ""
+  register: kibana_installed
+
+# Wait for Kibana pod only if we just installed it
+- name: Wait for Kibana pod to be ready
+  shell: kubectl wait --namespace={{ namespace }} --for=condition=ready pod -l app=kibana --timeout={{ pod_ready_timeout }}
+  when: kibana_exists.rc != 0 and kibana_installed is defined

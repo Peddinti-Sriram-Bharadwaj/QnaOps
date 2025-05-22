@@ -1,0 +1,90 @@
+---
+- name: Create filebeat-values.yaml with elastic password
+  copy:
+    dest: ./filebeat-values.yaml
+    content: |
+      filebeatConfig:
+        filebeat.yml: |
+          filebeat.inputs:
+            - type: container
+              paths:
+                - /var/log/containers/*.log
+
+          processors:
+            - add_kubernetes_metadata:
+                in_cluster: true
+
+          output.elasticsearch:
+            hosts: ['https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200']
+            username: "elastic"
+            password: "{{ elastic_password }}"
+            ssl.verification_mode: none
+
+          setup.kibana:
+            host: "http://elasticsearch-master.{{ namespace }}.svc.cluster.local:5601"
+
+      daemonset:
+        enabled: true
+  when: elastic_password != ""
+
+- name: Create Filebeat ConfigMap with auth
+  copy:
+    dest: ./filebeat-config.yaml
+    content: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: filebeat-config
+        namespace: {{ namespace }}
+      data:
+        filebeat.yml: |-
+          filebeat.inputs:
+          - type: container
+            paths:
+              - /var/log/containers/*.log
+
+          processors:
+            - add_kubernetes_metadata:
+                in_cluster: true
+
+          output.elasticsearch:
+            hosts: ['https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200']
+            username: "elastic"
+            password: "{{ elastic_password }}"
+            ssl.verification_mode: none
+
+          setup.kibana:
+            host: "http://elasticsearch-master.{{ namespace }}.svc.cluster.local:5601"
+  when: elastic_password != ""
+
+- name: Apply Filebeat ConfigMap
+  shell: kubectl apply -f ./filebeat-config.yaml
+  when: elastic_password != ""
+
+########################################################################
+# 📦 Deploy Filebeat DaemonSet via Helm using the custom config
+########################################################################
+- name: Check if Filebeat is already installed
+  shell: helm list -n {{ namespace }} -q | grep -w filebeat
+  register: filebeat_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Filebeat with Helm using filebeat-values.yaml
+  shell: |
+    helm install filebeat elastic/filebeat -n {{ namespace }} -f filebeat-values.yaml --timeout {{ install_timeout }}
+  when: filebeat_exists.rc != 0 and elastic_password != ""
+  register: filebeat_installed
+
+- name: Upgrade Filebeat with new values if already installed
+  shell: |
+    helm upgrade filebeat elastic/filebeat -n {{ namespace }} -f filebeat-values.yaml
+  when: filebeat_exists.rc == 0 and elastic_password != ""
+
+########################################################################
+# 🕒 Wait for Filebeat pods to be ready
+########################################################################
+- name: Wait for Filebeat pods to be ready
+  shell: |
+    kubectl wait --for=condition=ready pod -l release=filebeat -n {{ namespace }} --timeout={{ pod_ready_timeout }}
+  when: filebeat_installed is defined or filebeat_exists.rc == 0

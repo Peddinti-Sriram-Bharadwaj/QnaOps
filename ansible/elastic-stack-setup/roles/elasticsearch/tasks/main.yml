@@ -1,0 +1,53 @@
+---
+- name: Check if Elasticsearch is installed
+  shell: helm list -n {{ namespace }} -q | grep -w elasticsearch
+  register: elasticsearch_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Elasticsearch using Helm
+  shell: |
+    helm install elasticsearch elastic/elasticsearch -n {{ namespace }} \
+    --set persistence.enabled=true \
+    --set volumeClaimTemplate.resources.requests.storage="2Gi" \
+    --set replicas=1 \
+    --set minimumMasterNodes=1 \
+    --set resources.requests.memory="1Gi" \
+    --set resources.limits.memory="2Gi" \
+    --set esJavaOpts="-Xmx1g -Xms1g" \
+    --timeout {{ install_timeout }}
+  when: elasticsearch_exists.rc != 0
+  register: elasticsearch_installed
+
+# Only wait for pod if we just installed Elasticsearch
+- name: Wait for Elasticsearch pod to be ready
+  shell: kubectl wait --namespace={{ namespace }} --for=condition=ready pod -l app=elasticsearch-master --timeout={{ pod_ready_timeout }}
+  when: elasticsearch_exists.rc != 0 or elasticsearch_installed is defined
+
+# Try to get the password regardless of whether we just installed or not
+- name: Check if Elasticsearch credentials secret exists
+  shell: kubectl get secrets --namespace={{ namespace }} elasticsearch-master-credentials -o name
+  register: elastic_secret_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Get Elasticsearch password
+  shell: |
+    kubectl get secrets --namespace={{ namespace }} elasticsearch-master-credentials \
+    -ojsonpath='{.data.password}' | base64 -d
+  register: elastic_password_raw
+  when: elastic_secret_exists.rc == 0
+  no_log: true  # Hide sensitive output
+
+- name: Set elastic password variable
+  set_fact:
+    elastic_password: "{{ elastic_password_raw.stdout }}"
+  when: elastic_secret_exists.rc == 0 and elastic_password_raw.stdout is defined
+  no_log: true  # Hide sensitive output
+
+- name: Test Elasticsearch health
+  shell: helm --namespace={{ namespace }} test elasticsearch
+  register: elastic_test_result
+  failed_when: "'FAIL' in elastic_test_result.stdout"
+  changed_when: false
+  when: elastic_password != ""

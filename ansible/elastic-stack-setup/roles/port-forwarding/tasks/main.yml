@@ -1,0 +1,35 @@
+---
+# Check if port-forwards are already running
+- name: Check if Elasticsearch port-forward is already running
+  shell: ps aux | grep "kubectl port-forward.*elasticsearch" | grep -v grep
+  register: elasticsearch_forward_running
+  ignore_errors: true
+  changed_when: false
+
+- name: Port forward Elasticsearch
+  shell: ./elastic-forward.sh &
+  when: elasticsearch_forward_running.rc != 0
+  args:
+    executable: /bin/bash
+
+- name: Check if Kibana port-forward is already running
+  shell: ps aux | grep "kubectl port-forward.*kibana" | grep -v grep
+  register: kibana_forward_running
+  ignore_errors: true
+  changed_when: false
+
+- name: Port forward Kibana
+  shell: ./kibana-forward.sh &
+  when: kibana_forward_running.rc != 0
+  args:
+    executable: /bin/bash
+
+- name: Print Elasticsearch password
+  debug:
+    msg: "Elasticsearch password is: {{ elastic_password }}"
+  when: elastic_password != ""
+
+# Simply inform the user to run the start-kibana script
+- name: Inform user about starting Kibana
+  debug:
+    msg: "Setup complete. To access Kibana, please run the command: ./start-kibana.sh"

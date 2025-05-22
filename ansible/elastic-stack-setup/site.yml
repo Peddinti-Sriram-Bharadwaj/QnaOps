@@ -1,0 +1,11 @@
+---
+- name: Set up Elastic Stack on Minikube with Ansible
+  hosts: localhost
+  connection: local
+  roles:
+    - minikube
+    - elasticsearch
+    - kibana
+    - metricbeat
+    - filebeat
+    - port-forwarding

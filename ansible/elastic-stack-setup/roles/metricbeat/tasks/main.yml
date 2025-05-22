@@ -1,0 +1,36 @@
+---
+- name: Check if Metricbeat is installed
+  shell: helm list -n {{ namespace }} -q | grep -w metricbeat
+  register: metricbeat_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Metricbeat
+  shell: |
+    helm install metricbeat elastic/metricbeat -n {{ namespace }} \
+    --set elasticsearch.hosts={https://elasticsearch-master.{{ namespace }}.svc.cluster.local:9200} \
+    --set elasticsearch.username=elastic \
+    --set elasticsearch.password={{ elastic_password }} \
+    --set daemonset.enabled=true \
+    --timeout {{ install_timeout }}
+  when: metricbeat_exists.rc != 0 and elastic_password != ""
+  register: metricbeat_installed
+
+
+
+# Check if metricbeat-values.yaml exists before applying it
+- name: Check if metricbeat-values.yaml exists
+  stat:
+    path: metricbeat-values.yaml
+  register: metricbeat_values_file
+
+- name: Apply custom Metricbeat values
+  shell: |
+    helm upgrade --install metricbeat elastic/metricbeat -n {{ namespace }} -f metricbeat-values.yaml
+  when: metricbeat_values_file.stat.exists
+
+# Wait for Metricbeat pods only if we just installed or upgraded it
+- name: Wait for Metricbeat pods to be ready
+  shell: |
+    kubectl wait --for=condition=ready pod -l release=metricbeat -n {{ namespace }} --timeout={{ pod_ready_timeout }}
+  when: metricbeat_installed is defined or (metricbeat_values_file.stat.exists and metricbeat_exists.rc == 0)
