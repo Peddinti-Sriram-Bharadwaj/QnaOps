@@ -201,7 +201,7 @@ pipeline {
             }
         }
         
-        stage('Smoke Tests') {
+        stage('Smoke Tests & Cleanup') {
             steps {
                 script {
                     sh '''
@@ -220,6 +220,10 @@ pipeline {
                         fi
                         
                         echo "✅ Smoke tests passed"
+                        
+                        # Clean up Docker resources
+                        echo "🧹 Cleaning up Docker resources..."
+                        docker system prune -f || echo "⚠️ Docker cleanup skipped"
                     '''
                 }
             }
@@ -228,10 +232,14 @@ pipeline {
     
     post {
         always {
-            // Clean up temporary files and resources
-            sh '''
-                docker system prune -f 2>/dev/null || true
-            '''
+            script {
+                try {
+                    // Clean up Docker resources
+                    sh 'docker system prune -f'
+                } catch (Exception e) {
+                    echo "Warning: Docker cleanup failed: ${e.getMessage()}"
+                }
+            }
         }
         
         success {
