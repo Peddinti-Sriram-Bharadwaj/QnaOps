@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         DOCKER_BUILDKIT = "1"
-        REGISTRY = "docker.io/sriram9217"  // Your Docker registry
-        ANSIBLE_VAULT_PASSWORD_FILE = "ansible/vault_pass.txt"
+        REGISTRY = "docker.io/sriram9217"
+        ANSIBLE_VAULT_PASSWORD_FILE = "${WORKSPACE}/ansible/vault_pass.txt"  // Full path for reliability
         KUBECTL_TIMEOUT = "120s"
     }
 
@@ -16,23 +16,27 @@ pipeline {
             }
         }
 
-        // 2. Build & Push Docker Images (Early Failure Detection)
+        // 2. Build & Push Docker Images
         stage('Build & Push Docker Images') {
             steps {
                 script {
-                    sh './build_and_push.sh'
+                    sh '''
+                    #!/bin/zsh
+                    ./build_and_push.sh
+                    '''
                 }
             }
         }
 
-        // 3. Deploy Infrastructure (ELK Stack)
+        // 3. Deploy ELK Stack
         stage('Deploy ELK Stack') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'vault-pass-id', variable: 'VAULT_PASS')]) {
                         sh """
-                        echo "$VAULT_PASS" > $ANSIBLE_VAULT_PASSWORD_FILE
-                        chmod 600 $ANSIBLE_VAULT_PASSWORD_FILE  # Restrict permissions
+                        #!/bin/zsh
+                        echo "$VAULT_PASS" > "$ANSIBLE_VAULT_PASSWORD_FILE"
+                        chmod 600 "$ANSIBLE_VAULT_PASSWORD_FILE"
                         ansible-playbook ansible/elastic_stack_setup.yaml
                         """
                     }
@@ -40,13 +44,14 @@ pipeline {
             }
         }
 
-        // 4. Deploy Database (Before App)
+        // 4. Deploy Database
         stage('Deploy Database') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'vault-pass-id', variable: 'VAULT_PASS')]) {
                         sh """
-                        echo "$VAULT_PASS" > $ANSIBLE_VAULT_PASSWORD_FILE
+                        #!/bin/zsh
+                        echo "$VAULT_PASS" > "$ANSIBLE_VAULT_PASSWORD_FILE"
                         ansible-playbook ansible/deploy-db.yaml
                         """
                     }
@@ -60,7 +65,8 @@ pipeline {
                 script {
                     withCredentials([string(credentialsId: 'vault-pass-id', variable: 'VAULT_PASS')]) {
                         sh """
-                        echo "$VAULT_PASS" > $ANSIBLE_VAULT_PASSWORD_FILE
+                        #!/bin/zsh
+                        echo "$VAULT_PASS" > "$ANSIBLE_VAULT_PASSWORD_FILE"
                         ansible-playbook ansible/deploy-fastapi-nginx.yaml
                         """
                     }
@@ -71,14 +77,18 @@ pipeline {
         // 6. Apply Kubernetes Manifests
         stage('Apply Kubernetes Manifests') {
             steps {
-                sh 'kubectl apply -f k8s/'
+                sh '''
+                #!/bin/zsh
+                kubectl apply -f k8s/
+                '''
             }
         }
 
-        // 7. Verify & Rolling Restart (Optional)
+        // 7. Verify & Rolling Restart
         stage('Verify & Rolling Restart') {
             steps {
                 sh '''
+                #!/bin/zsh
                 kubectl rollout status deployment/fastapi --timeout=120s
                 kubectl rollout status deployment/nginx --timeout=120s
                 kubectl rollout restart deployment fastapi
@@ -90,54 +100,61 @@ pipeline {
 
     post {
         always {
-            echo "🚀 Starting cleanup phase..."
+            echo "🍏 Starting MacOS cleanup..."
             script {
-                // 1. SECURE VAULT CLEANUP
+                // 1. Secure Vault Cleanup (BSD-compatible)
                 sh """
-                echo "Cleaning up Ansible vault credentials..."
-                rm -f "$ANSIBLE_VAULT_PASSWORD_FILE" && \
-                [ ! -f "$ANSIBLE_VAULT_PASSWORD_FILE" ] && \
-                echo "Vault password file removed" || echo "WARNING: Failed to remove vault file"
+                #!/bin/zsh
+                echo "Cleaning Ansible vault..."
+                rm -f "$ANSIBLE_VAULT_PASSWORD_FILE"
+                if [ ! -f "$ANSIBLE_VAULT_PASSWORD_FILE" ]; then
+                    echo "Vault password file removed"
+                else
+                    echo "WARNING: Failed to remove vault file"
+                fi
                 """
 
-                // 2. DOCKER SYSTEM CLEANUP
+                // 2. Docker Cleanup (MacOS Docker Desktop)
                 sh '''
-                echo "Pruning Docker resources..."
-                docker system prune -f --filter "until=24h" || echo "Docker prune failed (maybe Docker not installed?)"
+                #!/bin/zsh
+                echo "Pruning Docker..."
+                if command -v docker &> /dev/null; then
+                    docker system prune -f --filter "until=24h"
+                    docker volume prune -f
+                else
+                    echo "Docker not found (Is Docker Desktop running?)"
+                fi
                 '''
 
-                // 3. KUBERNETES RESOURCE VERIFICATION
+                // 3. Kubernetes Status Check (BSD grep)
                 sh """
-                echo "Checking Kubernetes pod status..."
-                kubectl get pods --no-headers | grep -v "Running\|Completed" && \
+                #!/bin/zsh
+                echo "Checking pods..."
+                kubectl get pods --no-headers | grep -E -v "Running|Completed" && \\
                 echo "WARNING: Non-running pods detected" || true
                 """
 
-                // 4. TEMPORARY FILE CLEANUP
+                // 4. MacOS Temporary Files
                 sh '''
-                echo "Cleaning temporary files..."
+                #!/bin/zsh
+                echo "Cleaning MacOS temp files..."
                 find . -type f -name "*.tmp" -delete
+                find . -type f -name ".DS_Store" -delete
                 '''
             }
         }
-        success {
-            echo "✅ Pipeline succeeded! Cleanup completed."
-            // Optional: Slack/email notification
-        }
         failure {
-            echo "❌ Pipeline failed! Partial cleanup attempted."
-            // 5. FAILURE-SPECIFIC CLEANUP
+            // MacOS-specific rollback
             sh '''
-            echo "Attempting emergency rollback..."
-            kubectl rollout undo deployment/fastapi || true
-            kubectl rollout undo deployment/nginx || true
+            #!/bin/zsh
+            echo "Attempting rollback..."
+            kubectl rollout undo deployment/fastapi 2>/dev/null || true
+            kubectl rollout undo deployment/nginx 2>/dev/null || true
             '''
-            // Optional: Send failure alerts
         }
         cleanup {
-            // 6. ALWAYS-RUN WORKSPACE CLEANUP
-            echo "Final workspace cleanup..."
-            cleanWs()  // Cleans Jenkins workspace
+            // Workspace cleanup (MacOS-compatible)
+            cleanWs()
         }
     }
 }
