@@ -1,5 +1,6 @@
-# Stage 1: ARM64-optimized builder (now dependency-free)
-FROM --platform=linux/arm64 python:3.10-slim-bookworm as builder
+# Stage 1: Builder
+ARG TARGETPLATFORM=linux/arm64
+FROM --platform=$TARGETPLATFORM python:3.10-slim-bookworm as builder
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -11,10 +12,11 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --user -r requirements.txt  # No need for rospypi now
+    pip install --user -r requirements.txt
 
-# Stage 2: Minimal production image
-FROM --platform=linux/arm64 python:3.10-slim-bookworm
+# Stage 2: Production
+ARG TARGETPLATFORM=linux/arm64
+FROM --platform=$TARGETPLATFORM python:3.10-slim-bookworm
 
 WORKDIR /app
 COPY --from=builder --chown=1000:1000 /root/.local /home/appuser/.local
@@ -24,13 +26,10 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONOPTIMIZE=2 \
     UVICORN_THREADS=2
 
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home /home/appuser \
-    --uid 1000 \
-    appuser && \
-    chown -R appuser:appuser /app
+RUN groupadd -g 1000 appuser && \
+    useradd -u 1000 -g appuser -d /home/appuser -s /bin/false appuser && \
+    mkdir -p /home/appuser && \
+    chown -R appuser:appuser /app /home/appuser
 
 USER appuser
 COPY --chown=appuser:appuser main.py .
