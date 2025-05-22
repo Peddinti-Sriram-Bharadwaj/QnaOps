@@ -207,49 +207,47 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const title = "Ask a Question";
-        let i = 0;
-        const target = document.getElementById("page-title");
-
-        function typeWriter() {
-            if (i < title.length) {
-            target.innerHTML += title.charAt(i);
-            i++;
-            setTimeout(typeWriter, 75);
-            }
+      // Typewriter effect for title
+      const title = "Ask a Question";
+      let i = 0;
+      const target = document.getElementById("page-title");
+  
+      function typeWriter() {
+        if (i < title.length) {
+          target.innerHTML += title.charAt(i);
+          i++;
+          setTimeout(typeWriter, 75);
         }
-
-        typeWriter();
-        });
-    document.addEventListener('DOMContentLoaded', function () {
+      }
+  
+      typeWriter();
+  
+      // Materialize textarea auto-resize
       M.textareaAutoResize(document.getElementById('context'));
-
+  
+      // Dark mode toggle logic
       const toggle = document.getElementById('darkModeToggle');
       const body = document.body;
-
+  
       if (localStorage.getItem('darkMode') === 'enabled') {
         body.classList.add('dark-mode');
-        toggle.checked = true;
+        toggle.querySelector('i').textContent = 'brightness_3'; // moon
       }
-
-      toggle.addEventListener('change', () => {
-        if (toggle.checked) {
-          body.classList.add('dark-mode');
-          localStorage.setItem('darkMode', 'enabled');
-        } else {
-          body.classList.remove('dark-mode');
-          localStorage.setItem('darkMode', 'disabled');
-        }
+  
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        const isDark = body.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+        toggle.querySelector('i').textContent = isDark ? 'brightness_3' : 'brightness_6'; // moon/sun
+      });
+  
+      // Toast on submit
+      document.querySelector("form").addEventListener("submit", () => {
+        M.toast({ html: 'Submitting your question...', classes: 'rounded' });
       });
     });
-
-    document.querySelector("form").addEventListener("submit", () => {
-  M.toast({html: 'Submitting your question...', classes: 'rounded'});
-});
-
-    
-
   </script>
+  
 
   <!-- Futuristic Footer -->
 <footer class="center-align futuristic-footer z-depth-1">
