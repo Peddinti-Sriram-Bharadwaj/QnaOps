@@ -15,7 +15,7 @@ POSTGRES_USER = os.environ["POSTGRES_USER"]
 POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 REDIS_HOST = os.environ["REDIS_HOST"]
 REDIS_PASSWORD = os.environ["REDIS_PASSWORD"]
-ASHUTOSH_SERVER_IP = os.environ.get("ASHUTOSH_SERVER_IP", "https://60ee-49-207-60-154.ngrok-free.app/answer")  # endpoint that handles question answering
+ASHUTOSH_SERVER_IP = os.environ.get("ASHUTOSH_SERVER_IP", "https://fe72-49-207-63-104.ngrok-free.app/answer")  # endpoint that handles question answering
 
 r = redis.Redis(host=REDIS_HOST, port=6379, password=REDIS_PASSWORD, decode_responses=True)
 
